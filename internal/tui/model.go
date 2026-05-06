@@ -14,6 +14,7 @@ import (
 	"github.com/charmbracelet/bubbles/textarea"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mager/local-llm-quickstart/internal/llm"
 )
@@ -316,11 +317,13 @@ func (m *Model) refreshViewport() {
 		switch msg.Role {
 		case "user":
 			b.WriteString(userStyle.Render("you"))
+			b.WriteString("\n")
+			b.WriteString(m.renderPlain(msg.Content))
 		default:
 			b.WriteString(llmStyle.Render("llm"))
+			b.WriteString("\n")
+			b.WriteString(m.renderMarkdown(msg.Content))
 		}
-		b.WriteString("\n")
-		b.WriteString(strings.TrimSpace(msg.Content))
 		b.WriteString("\n\n")
 	}
 	if m.waiting {
@@ -329,6 +332,27 @@ func (m *Model) refreshViewport() {
 	}
 	m.viewport.SetContent(strings.TrimSpace(b.String()))
 	m.viewport.GotoBottom()
+}
+
+func (m Model) renderPlain(content string) string {
+	width := max(20, m.viewport.Width)
+	return lipgloss.NewStyle().Width(width).Render(strings.TrimSpace(content))
+}
+
+func (m Model) renderMarkdown(content string) string {
+	width := max(20, m.viewport.Width-2)
+	renderer, err := glamour.NewTermRenderer(
+		glamour.WithAutoStyle(),
+		glamour.WithWordWrap(width),
+	)
+	if err != nil {
+		return m.renderPlain(content)
+	}
+	rendered, err := renderer.Render(strings.TrimSpace(content))
+	if err != nil {
+		return m.renderPlain(content)
+	}
+	return strings.TrimSpace(rendered)
 }
 
 func (m Model) tokensForMessages(messages []llm.Message) int {

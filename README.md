@@ -116,6 +116,8 @@ go run ./cmd/local-llm \
 
 Scroll long responses with `PageUp`/`PageDown`, `Ctrl+U`/`Ctrl+D`,
 `Ctrl+G` for top, `Ctrl+B` for bottom, or your mouse/trackpad wheel.
+Assistant responses are rendered as terminal Markdown with Charmbracelet Glamour,
+so headings, lists, emphasis, and code blocks are easier to scan.
 
 The default token mode is `auto`. Tiny prompts get small budgets, and bigger
 requests like itineraries, drafts, or code tasks get more room. If a server stops
