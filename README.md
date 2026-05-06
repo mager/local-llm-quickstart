@@ -2,6 +2,15 @@
 
 A small Go TUI for talking to a local OpenAI-compatible model server.
 
+The TUI has graduated into its own project: `llocal`.
+
+```text
+https://github.com/mager/llocal
+```
+
+This repo remains the quickstart: model download notes, runtime experiments, and
+the simplest path to seeing a local OpenAI-compatible endpoint answer.
+
 The app does not load model weights itself. It speaks to a local OpenAI-compatible
 endpoint, which keeps the interface simple and lets the serving runtime do the hard
 inference work.
