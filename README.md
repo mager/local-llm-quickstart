@@ -119,10 +119,10 @@ Scroll long responses with `PageUp`/`PageDown`, `Ctrl+U`/`Ctrl+D`,
 Assistant responses are rendered as terminal Markdown with Charmbracelet Glamour,
 so headings, lists, emphasis, and code blocks are easier to scan.
 
-The default token mode is `auto`. Tiny prompts get small budgets, and bigger
-requests like itineraries, drafts, or code tasks get more room. If a server stops
-because it hit the token cap, the TUI tells you to use `/continue` or raise the
-budget.
+The default token mode is `auto`. Tiny prompts get small budgets, and most real
+requests get a 4096-token budget so useful answers do not constantly need
+continuation. If a server stops because it hit the token cap, the TUI tells you
+to use `/continue` or raise the budget.
 
 ## Offline Check
 

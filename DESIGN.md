@@ -64,9 +64,9 @@ The app has four vertical regions:
 3. Input textarea
 4. Footer
 
-All regions share a two-character horizontal gutter.
+The app should avoid app-wide padding. Glamour already applies readable Markdown spacing, and extra outer gutters can make narrow terminal panes feel cramped.
 
-This gutter is not decoration. It keeps the left edge calm and gives Glamour-rendered Markdown room to breathe.
+Use spacing inside the rendered content, not around the whole app shell.
 
 ## Header
 
@@ -269,10 +269,10 @@ The app should show the current mode:
 ```text
 tokens=auto next~548
 tokens=auto last=4096
-tokens=2048
+tokens=4096
 ```
 
-Auto mode should be understandable, not mysterious. It can make a rough guess based on prompt length and task words like "itinerary", "draft", "detailed", "code", or "debug".
+Auto mode should be understandable, not mysterious. It should use a generous 4096-token budget for most real prompts, while still using a small budget for tiny greetings and smoke tests.
 
 Manual override should remain obvious:
 
@@ -370,4 +370,3 @@ It should not look like:
 - A README renderer with an input bolted underneath
 
 The best version feels like a small, sharp local AI workbench.
-
