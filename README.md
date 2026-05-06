@@ -104,11 +104,12 @@ go run ./cmd/local-llm \
 
 ```text
 /help                show commands
+/continue            continue after a token-limit cutoff
 /model               show the endpoint and model name
 /reset               clear the conversation
 /save transcript.md  save the current chat
 /tokens auto         estimate max tokens from the prompt
-/tokens 2048         manually set max tokens
+/tokens 4096         manually set max tokens
 /temp 0.4            set temperature
 /quit                quit
 ```
@@ -118,7 +119,8 @@ Scroll long responses with `PageUp`/`PageDown`, `Ctrl+U`/`Ctrl+D`,
 
 The default token mode is `auto`. Tiny prompts get small budgets, and bigger
 requests like itineraries, drafts, or code tasks get more room. If a server stops
-because it hit the token cap, the TUI tells you to raise the budget.
+because it hit the token cap, the TUI tells you to use `/continue` or raise the
+budget.
 
 ## Offline Check
 

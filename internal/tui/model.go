@@ -158,7 +158,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = nil
 			content := msg.content
 			if msg.finishReason == "length" {
-				content = strings.TrimSpace(content) + "\n\n[Stopped at token limit. Try `/tokens auto` or `/tokens 4096` and ask again.]"
+				content = strings.TrimSpace(content) + "\n\n[Stopped at token limit. Type `/continue`, or use `/tokens 4096` and ask again.]"
 			}
 			m.messages = append(m.messages, llm.Message{Role: "assistant", Content: content})
 		}
@@ -187,7 +187,7 @@ func (m Model) View() string {
 	header := headerStyle.Render("local-llm") + helpStyle.Render(
 		fmt.Sprintf("  %s  %s temp=%.2f", m.endpoint, tokenLabel, m.temperature),
 	)
-	footer := helpStyle.Render("pgup/pgdn scroll, ctrl+u/d half, ctrl+g/b top/bottom | /help /tokens auto|2048 /temp 0.4 /quit")
+	footer := helpStyle.Render("pgup/pgdn scroll, ctrl+u/d half, ctrl+g/b top/bottom | /continue /help /tokens auto|4096 /quit")
 	if m.waiting {
 		if m.lastTokens > 0 {
 			footer = helpStyle.Render(fmt.Sprintf("thinking... tokens=%d ", m.lastTokens)) + footer
@@ -210,6 +210,10 @@ func (m Model) View() string {
 func (m Model) requestCompletion() tea.Cmd {
 	messages := append([]llm.Message(nil), m.messages...)
 	maxTokens := m.tokensForMessages(messages)
+	return m.requestCompletionWithTokens(messages, maxTokens)
+}
+
+func (m Model) requestCompletionWithTokens(messages []llm.Message, maxTokens int) tea.Cmd {
 	temperature := m.temperature
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
@@ -235,8 +239,23 @@ func (m Model) handleCommand(value string) (tea.Model, tea.Cmd) {
 	case "/help":
 		m.messages = append(m.messages, llm.Message{
 			Role:    "assistant",
-			Content: "Commands: /help, /reset, /save transcript.md, /tokens auto, /tokens 2048, /temp 0.4, /model, /quit.\n\nScroll: PageUp/PageDown, Ctrl+U/Ctrl+D, Ctrl+G top, Ctrl+B bottom, mouse wheel.",
+			Content: "Commands: /help, /continue, /reset, /save transcript.md, /tokens auto, /tokens 4096, /temp 0.4, /model, /quit.\n\nScroll: PageUp/PageDown, Ctrl+U/Ctrl+D, Ctrl+G top, Ctrl+B bottom, mouse wheel.",
 		})
+	case "/continue", "/cont":
+		if len(m.messages) == 0 {
+			m.err = fmt.Errorf("nothing to continue yet")
+			break
+		}
+		m.messages = append(m.messages, llm.Message{
+			Role:    "user",
+			Content: "Continue exactly where you left off. Do not restart the answer. Do not repeat completed sections.",
+		})
+		m.waiting = true
+		m.lastTokens = m.continuationTokens()
+		m.err = nil
+		m.refreshViewport()
+		messages := append([]llm.Message(nil), m.messages...)
+		return m, m.requestCompletionWithTokens(messages, m.lastTokens)
 	case "/model":
 		m.messages = append(m.messages, llm.Message{
 			Role:    "assistant",
@@ -342,9 +361,9 @@ func estimateMaxTokens(prompt string) int {
 		estimated = 128
 	}
 	if strings.Contains(lower, "itinerary") || strings.Contains(lower, "day-by-day") || strings.Contains(lower, "day by day") {
-		estimated = max(estimated, 2048)
+		estimated = max(estimated, 4096)
 		if days := mentionedDays(lower); days > 0 {
-			estimated = max(estimated, days*160)
+			estimated = max(estimated, days*700)
 		}
 	}
 	if strings.Contains(lower, "detailed") || strings.Contains(lower, "comprehensive") || strings.Contains(lower, "full ") {
@@ -398,6 +417,16 @@ func mentionedDays(lower string) int {
 
 func clamp(value int, low int, high int) int {
 	return min(max(value, low), high)
+}
+
+func (m Model) continuationTokens() int {
+	if !m.autoTokens {
+		return m.maxTokens
+	}
+	if m.lastTokens > 0 {
+		return clamp(m.lastTokens*2, 2048, 4096)
+	}
+	return 4096
 }
 
 func saveTranscript(path string, messages []llm.Message) error {
