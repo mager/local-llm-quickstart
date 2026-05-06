@@ -55,6 +55,8 @@ type responseMsg struct {
 	err          error
 }
 
+const gutterWidth = 2
+
 var (
 	headerStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("14"))
 	helpStyle   = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "238", Dark: "252"})
@@ -99,9 +101,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		m.viewport.Width = msg.Width
+		m.viewport.Width = m.contentWidth()
 		m.viewport.Height = max(1, msg.Height-7)
-		m.textarea.SetWidth(msg.Width)
+		m.textarea.SetWidth(m.contentWidth())
 		m.refreshViewport()
 		return m, nil
 
@@ -201,11 +203,26 @@ func (m Model) View() string {
 	}
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		header,
-		m.viewport.View(),
-		m.textarea.View(),
-		footer,
+		m.withGutter(header),
+		m.withGutter(m.viewport.View()),
+		m.withGutter(m.textarea.View()),
+		m.withGutter(footer),
 	)
+}
+
+func (m Model) contentWidth() int {
+	if m.width == 0 {
+		return 80
+	}
+	return max(20, m.width-gutterWidth*2)
+}
+
+func (m Model) withGutter(content string) string {
+	return lipgloss.NewStyle().
+		Width(m.contentWidth()).
+		PaddingLeft(gutterWidth).
+		PaddingRight(gutterWidth).
+		Render(content)
 }
 
 func (m Model) requestCompletion() tea.Cmd {
