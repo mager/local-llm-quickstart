@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/glamour/ansi"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/mager/local-llm-quickstart/internal/llm"
 )
@@ -58,22 +59,27 @@ type responseMsg struct {
 const gutterWidth = 2
 
 var (
-	headerStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("14"))
-	helpStyle   = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "238", Dark: "252"})
-	inputHint   = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "236", Dark: "255"})
-	userStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("12"))
-	llmStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("10"))
-	errorStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("9"))
+	headerStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#c7d2fe"))
+	pillStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#111827")).Background(lipgloss.Color("#7dd3fc")).Padding(0, 1)
+	metaStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#8a93a6"))
+	helpStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#9aa6b2"))
+	inputHint   = lipgloss.NewStyle().Foreground(lipgloss.Color("#cbd5e1"))
+	userStyle   = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#93c5fd"))
+	llmStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#bef264"))
+	errorStyle  = lipgloss.NewStyle().Foreground(lipgloss.Color("#fca5a5"))
 )
 
 func New(config Config) Model {
 	input := textarea.New()
 	input.Placeholder = "Ask a coding question. Enter sends, Shift+Enter adds a newline."
+	input.Prompt = "› "
 	input.Focus()
 	input.ShowLineNumbers = false
 	input.SetHeight(3)
+	input.FocusedStyle.CursorLine = lipgloss.NewStyle()
 	input.FocusedStyle.Placeholder = inputHint
 	input.FocusedStyle.Prompt = inputHint
+	input.BlurredStyle.CursorLine = lipgloss.NewStyle()
 	input.BlurredStyle.Placeholder = inputHint
 	input.BlurredStyle.Prompt = inputHint
 
@@ -187,15 +193,21 @@ func (m Model) View() string {
 			tokenLabel = fmt.Sprintf("tokens=auto last=%d", m.lastTokens)
 		}
 	}
-	header := headerStyle.Render("local-llm") + helpStyle.Render(
-		fmt.Sprintf("  %s  %s temp=%.2f", m.endpoint, tokenLabel, m.temperature),
+	header := lipgloss.JoinHorizontal(
+		lipgloss.Center,
+		headerStyle.Render("local-llm"),
+		" ",
+		pillStyle.Render(tokenLabel),
+		" ",
+		metaStyle.Render(fmt.Sprintf("%s  temp=%.2f", m.endpoint, m.temperature)),
 	)
-	footer := helpStyle.Render("pgup/pgdn scroll, ctrl+u/d half, ctrl+g/b top/bottom | /continue /help /tokens auto|4096 /quit")
+	footerText := "pgup/pgdn scroll · ctrl+u/d half · ctrl+g/b top/bottom · /continue · /tokens auto|4096 · esc quit"
+	footer := helpStyle.Render(footerText)
 	if m.waiting {
 		if m.lastTokens > 0 {
-			footer = helpStyle.Render(fmt.Sprintf("thinking... tokens=%d ", m.lastTokens)) + footer
+			footer = pillStyle.Render(fmt.Sprintf("thinking · %d tokens", m.lastTokens)) + " " + footer
 		} else {
-			footer = helpStyle.Render("thinking... ") + footer
+			footer = pillStyle.Render("thinking") + " " + footer
 		}
 	}
 	if m.err != nil {
@@ -359,7 +371,7 @@ func (m Model) renderPlain(content string) string {
 func (m Model) renderMarkdown(content string) string {
 	width := max(20, m.viewport.Width-2)
 	renderer, err := glamour.NewTermRenderer(
-		glamour.WithAutoStyle(),
+		glamour.WithStyles(markdownStyle()),
 		glamour.WithWordWrap(width),
 	)
 	if err != nil {
@@ -370,6 +382,114 @@ func (m Model) renderMarkdown(content string) string {
 		return m.renderPlain(content)
 	}
 	return strings.TrimSpace(rendered)
+}
+
+func markdownStyle() ansi.StyleConfig {
+	return ansi.StyleConfig{
+		Document: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				Color:       strPtr("#cbd5e1"),
+				BlockPrefix: "\n",
+				BlockSuffix: "\n",
+			},
+			Margin: uintPtr(0),
+		},
+		Paragraph: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				Color: strPtr("#cbd5e1"),
+			},
+			Margin: uintPtr(1),
+		},
+		Heading: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				Color:       strPtr("#38bdf8"),
+				Bold:        boolPtr(true),
+				BlockSuffix: "\n",
+			},
+		},
+		H1: ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{Prefix: "◆ "}},
+		H2: ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{Prefix: "◆ "}},
+		H3: ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{Prefix: "▸ "}},
+		H4: ansi.StyleBlock{StylePrimitive: ansi.StylePrimitive{Prefix: "• "}},
+		List: ansi.StyleList{
+			LevelIndent: 2,
+			StyleBlock: ansi.StyleBlock{
+				StylePrimitive: ansi.StylePrimitive{Color: strPtr("#cbd5e1")},
+				Margin:         uintPtr(1),
+			},
+		},
+		Item: ansi.StylePrimitive{
+			BlockPrefix: "  • ",
+		},
+		Enumeration: ansi.StylePrimitive{
+			Color:       strPtr("#7dd3fc"),
+			BlockPrefix: ". ",
+		},
+		Strong: ansi.StylePrimitive{
+			Color: strPtr("#f8fafc"),
+			Bold:  boolPtr(true),
+		},
+		Emph: ansi.StylePrimitive{
+			Color:  strPtr("#e9d5ff"),
+			Italic: boolPtr(true),
+		},
+		HorizontalRule: ansi.StylePrimitive{
+			Color:  strPtr("#475569"),
+			Format: "\n────────────────────────\n",
+		},
+		Code: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{
+				Prefix:          " ",
+				Suffix:          " ",
+				Color:           strPtr("#bef264"),
+				BackgroundColor: strPtr("#1f2937"),
+			},
+		},
+		CodeBlock: ansi.StyleCodeBlock{
+			StyleBlock: ansi.StyleBlock{
+				StylePrimitive: ansi.StylePrimitive{
+					Color:           strPtr("#dbeafe"),
+					BackgroundColor: strPtr("#111827"),
+				},
+				Margin: uintPtr(1),
+			},
+			Theme: "tokyonight-night",
+		},
+		Table: ansi.StyleTable{
+			StyleBlock: ansi.StyleBlock{
+				StylePrimitive: ansi.StylePrimitive{Color: strPtr("#cbd5e1")},
+				Margin:         uintPtr(1),
+			},
+			CenterSeparator: strPtr("─"),
+			ColumnSeparator: strPtr("│"),
+			RowSeparator:    strPtr("─"),
+		},
+		BlockQuote: ansi.StyleBlock{
+			StylePrimitive: ansi.StylePrimitive{Color: strPtr("#a7f3d0")},
+			Indent:         uintPtr(1),
+			IndentToken:    strPtr("│ "),
+		},
+		Link: ansi.StylePrimitive{
+			Color:     strPtr("#7dd3fc"),
+			Underline: boolPtr(true),
+		},
+		LinkText: ansi.StylePrimitive{
+			Color: strPtr("#bae6fd"),
+			Bold:  boolPtr(true),
+		},
+	}
+}
+
+func strPtr(value string) *string {
+	return &value
+}
+
+func boolPtr(value bool) *bool {
+	return &value
+}
+
+func uintPtr(value uint) *uint {
+	return &value
 }
 
 func (m Model) tokensForMessages(messages []llm.Message) int {
